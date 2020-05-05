@@ -1,0 +1,57 @@
+---
+
+- name: Create Node Exporter User
+  user:
+   name: node_exporter
+   system: yes
+
+- name: Create Node Exporter Directory
+  file:
+    path: /opt/node_exporter
+    owner: node_exporter
+    state: directory
+
+- name: Fetch Node Exporter Binary
+  unarchive:
+    src: "{{ node_exporter_url }}"
+    dest: /opt/node_exporter
+    owner: node_exporter
+    remote_src: yes
+    creates: /opt/node_exporter/node_exporter
+    extra_opts:
+      - -P
+      - --strip-components=1
+
+- name: Copy Node Exporter SystemD Unit File
+  copy:
+    src: node_exporter.service
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: 0644
+  register: node_exporter_service
+
+- name: Reload SystemD If Necessary
+  systemd:
+    daemon_reload: yes
+  when: node_exporter_service.changed
+
+- name: Ensure 9100/tcp is Open on Firewall
+  firewalld:
+    port: 9100/tcp
+    zone: public
+    permanent: yes
+    immediate: yes
+    state: enabled
+
+- name: Restart Node Exporter
+  service:
+    name: node_exporter
+    state: restarted
+  when: node_exporter_service.changed
+
+- name: Make Sure Node Exporter is Enabled
+  service:
+    name: node_exporter
+    state: started
+    enabled: yes
