@@ -1,0 +1,2 @@
+*.j2  text linguist-language=Python linguist-detectable=false eol=lf
+*.yml text linguist-language=YAML eol=lf
