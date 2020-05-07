@@ -5,6 +5,11 @@
    name: node_exporter
    system: yes
 
+- name: Check if in Docker
+  stat:
+    path: /.dockerenv
+  register: iscontainerfile
+
 - name: Create Node Exporter Directory
   file:
     path: /opt/node_exporter
@@ -34,7 +39,7 @@
 - name: Reload SystemD If Necessary
   systemd:
     daemon_reload: yes
-  when: node_exporter_service.changed
+  when: node_exporter_service.changed and not iscontainerfile.stat.exists
 
 - name: Ensure 9100/tcp is Open on Firewall
   firewalld:
@@ -43,15 +48,17 @@
     permanent: yes
     immediate: yes
     state: enabled
+  when: not iscontainerfile.stat.exists
 
 - name: Restart Node Exporter
   service:
     name: node_exporter
     state: restarted
-  when: node_exporter_service.changed
+  when: node_exporter_service.changed and not iscontainerfile.stat.exists
 
 - name: Make Sure Node Exporter is Enabled
   service:
     name: node_exporter
     state: started
     enabled: yes
+  when: not iscontainerfile.stat.exists
